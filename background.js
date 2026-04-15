@@ -1,12 +1,10 @@
 chrome.runtime.onInstalled.addListener(() => {
-  // Context menu for selected text
   chrome.contextMenus.create({
     id: "generateQRText",
     title: "Share this text as QR code",
     contexts: ["selection"]
   });
 
-  // Context menu for links
   chrome.contextMenus.create({
     id: "generateQRLink",
     title: "Share this link as QR code",
@@ -15,23 +13,23 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 chrome.contextMenus.onClicked.addListener((info) => {
+  let payload = null;
+
   if (info.menuItemId === "generateQRText" && info.selectionText) {
-    const popupUrl = chrome.runtime.getURL(`popup.html?text=${encodeURIComponent(info.selectionText)}`);
-
-    chrome.windows.create({
-      url: popupUrl,
-      type: "popup",
-      width: 300,
-      height: 300
-    });
+    payload = { type: "text", data: info.selectionText };
   } else if (info.menuItemId === "generateQRLink" && info.linkUrl) {
-    const popupUrl = chrome.runtime.getURL(`popup.html?text=${encodeURIComponent(info.linkUrl)}`);
+    payload = { type: "link", data: info.linkUrl };
+  }
 
-    chrome.windows.create({
-      url: popupUrl,
-      type: "popup",
-      width: 300,
-      height: 300
+  if (payload) {
+    // Store data in chrome.storage.local — no URL length limits
+    chrome.storage.local.set({ sharetext_data: payload }, () => {
+      chrome.windows.create({
+        url: chrome.runtime.getURL("popup.html"),
+        type: "popup",
+        width: 340,
+        height: 480
+      });
     });
   }
 });

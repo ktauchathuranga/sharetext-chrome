@@ -3,25 +3,267 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QR Code</title>
+  <title>ShareText — QR Code</title>
   <script src="libs/qrcode.js"></script>
-  <script src="popup.js"></script>
   <style>
-    body {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-      font-family: Arial, sans-serif;
+    :root {
+      --bg-primary: #0f0f13;
+      --bg-card: #1a1a24;
+      --bg-surface: #24243a;
+      --accent: #7c5cfc;
+      --accent-glow: rgba(124, 92, 252, 0.25);
+      --text-primary: #eaeaef;
+      --text-secondary: #8888a4;
+      --text-muted: #55556e;
+      --border: #2a2a40;
+      --error: #f44060;
+      --error-bg: rgba(244, 64, 96, 0.1);
+      --success: #3ddc84;
+      --radius: 12px;
+      --radius-sm: 8px;
     }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-width: 300px;
+      overflow-x: hidden;
+    }
+
+    .container {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      opacity: 0;
+      animation: fadeIn 0.3s ease forwards;
+    }
+
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+
+    /* Mode badge */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+
+    .badge svg {
+      width: 13px;
+      height: 13px;
+      fill: currentColor;
+    }
+
+    .badge.badge-text { color: #a78bfa; border-color: rgba(167, 139, 250, 0.25); background: rgba(167, 139, 250, 0.08); }
+    .badge.badge-link { color: #60a5fa; border-color: rgba(96, 165, 250, 0.25); background: rgba(96, 165, 250, 0.08); }
+    .badge.badge-page { color: #34d399; border-color: rgba(52, 211, 153, 0.25); background: rgba(52, 211, 153, 0.08); }
+
+    /* QR container */
+    .qr-wrapper {
+      background: #ffffff;
+      padding: 14px;
+      border-radius: var(--radius);
+      box-shadow: 0 0 30px var(--accent-glow), 0 4px 20px rgba(0, 0, 0, 0.4);
+      opacity: 0;
+      transform: scale(0.92);
+      animation: qrReveal 0.4s ease 0.15s forwards;
+    }
+
+    @keyframes qrReveal {
+      to { opacity: 1; transform: scale(1); }
+    }
+
     #qrcode {
-      width: 250px;
-      height: 250px;
+      width: 220px;
+      height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #qrcode img,
+    #qrcode canvas {
+      max-width: 100% !important;
+      max-height: 100% !important;
+    }
+
+    /* Preview text */
+    .preview {
+      width: 100%;
+      max-width: 260px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--text-secondary);
+      word-break: break-all;
+      max-height: 54px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .preview::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 22px;
+      background: linear-gradient(transparent, var(--bg-card));
+      pointer-events: none;
+    }
+
+    /* Character counter */
+    .char-count {
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.3px;
+    }
+
+    .char-count .count-value {
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .char-count .count-value.over-limit {
+      color: var(--error);
+    }
+
+    /* Action buttons */
+    .actions {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      max-width: 260px;
+    }
+
+    .btn {
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 9px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      outline: none;
+    }
+
+    .btn:hover {
+      background: var(--bg-surface);
+      border-color: var(--accent);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn svg {
+      width: 14px;
+      height: 14px;
+      fill: currentColor;
+    }
+
+    .btn.btn-copied {
+      border-color: var(--success);
+      color: var(--success);
+    }
+
+    /* Error state */
+    .error-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 24px 20px;
+      text-align: center;
+    }
+
+    .error-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--error-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .error-icon svg {
+      width: 24px;
+      height: 24px;
+      fill: var(--error);
+    }
+
+    .error-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .error-message {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      max-width: 240px;
+    }
+
+    /* Loading state */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+    }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
   </style>
 </head>
 <body>
-  <div id="qrcode"></div>
+  <div class="container" id="container">
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+    </div>
+  </div>
+  <script src="popup.js"></script>
 </body>
 </html>
